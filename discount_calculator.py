@@ -6,7 +6,7 @@ st.set_page_config(page_title="Battle Nexus Discount Calculator", layout="wide")
 st.title("🛠️ Battle Nexus Discount Calculator")
 
 st.markdown("""Upload a CSV file or manually enter product data. Edit, delete, calculate discounts, include VAT, and track stock.
-Empty fields are allowed on import.
+Empty fields and alternative encodings are supported.
 
 **CSV Column Suggestions (all optional):**
 - Product Name
@@ -28,8 +28,10 @@ vat_rate = 0.20
 uploaded_file = st.file_uploader("📤 Upload your CSV file here (optional)", type=["csv"])
 if uploaded_file:
     try:
-        df_upload = pd.read_csv(uploaded_file)
-        # Set default values for any missing columns
+        try:
+            df_upload = pd.read_csv(uploaded_file)
+        except UnicodeDecodeError:
+            df_upload = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
         for col in ["Product Name", "Retail Price (£)", "Discount %", "Cost Price (£)", "Stock Qty"]:
             if col not in df_upload.columns:
                 df_upload[col] = "" if col == "Product Name" else 0.0
@@ -99,4 +101,5 @@ if st.session_state.products:
     )
 
 st.markdown("---")
-st.caption("Built for Battle Nexus • Flexible CSV Import + VAT + Stock Support")
+st.caption("Built for Battle Nexus • Robust Encoding + VAT + Stock Support")
+
