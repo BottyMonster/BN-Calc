@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 
@@ -6,14 +5,14 @@ import pandas as pd
 st.set_page_config(page_title="Battle Nexus Discount Calculator", layout="wide")
 st.title("🛠️ Battle Nexus Discount Calculator")
 
-st.markdown("""
-Upload a CSV file or manually enter product data. Then edit or delete items, calculate discounts, and include VAT if required.
+st.markdown("""Upload a CSV file or manually enter product data. Then edit or delete items, calculate discounts, track stock, and include VAT if required.
 
 **CSV Format Required:**
 - Product Name
 - Retail Price (£)
 - Discount %
 - Cost Price (£)
+- Stock Qty
 """)
 
 # Initialize session state
@@ -29,7 +28,7 @@ uploaded_file = st.file_uploader("📤 Upload your CSV file here (optional)", ty
 if uploaded_file:
     try:
         df_upload = pd.read_csv(uploaded_file)
-        expected_cols = {"Product Name", "Retail Price (£)", "Discount %", "Cost Price (£)"}
+        expected_cols = {"Product Name", "Retail Price (£)", "Discount %", "Cost Price (£)", "Stock Qty"}
         if not expected_cols.issubset(df_upload.columns):
             st.error("CSV is missing one or more required columns.")
         else:
@@ -44,13 +43,15 @@ with st.form("manual_entry", clear_on_submit=True):
     retail = st.number_input("Retail Price (£)", min_value=0.0, step=0.01)
     discount = st.number_input("Discount %", min_value=0.0, max_value=100.0, step=0.1)
     cost = st.number_input("Cost Price (£)", min_value=0.0, step=0.01)
+    stock = st.number_input("Stock Qty", min_value=0, step=1)
     submitted = st.form_submit_button("Add Product")
     if submitted:
         st.session_state.products.append({
             "Product Name": name,
             "Retail Price (£)": retail,
             "Discount %": discount,
-            "Cost Price (£)": cost
+            "Cost Price (£)": cost,
+            "Stock Qty": stock
         })
 
 # Editable table with delete buttons
@@ -58,7 +59,7 @@ if st.session_state.products:
     st.markdown("### ✏️ Edit or Delete Products")
     edited_products = []
     for i, item in enumerate(st.session_state.products):
-        cols = st.columns([3, 2, 2, 2, 1])
+        cols = st.columns([3, 2, 2, 2, 2, 1])
         with cols[0]:
             item["Product Name"] = st.text_input(f"Product Name {i}", value=item["Product Name"], key=f"name_{i}")
         with cols[1]:
@@ -68,8 +69,10 @@ if st.session_state.products:
         with cols[3]:
             item["Cost Price (£)"] = st.number_input(f"Cost Price {i}", value=float(item["Cost Price (£)"]), key=f"cost_{i}")
         with cols[4]:
+            item["Stock Qty"] = st.number_input(f"Stock Qty {i}", value=int(item.get("Stock Qty", 0)), step=1, key=f"stock_{i}")
+        with cols[5]:
             if st.button("❌", key=f"delete_{i}"):
-                continue  # Skip adding to edited list (i.e., delete)
+                continue
         edited_products.append(item)
 
     st.session_state.products = edited_products
@@ -82,7 +85,7 @@ if st.session_state.products:
     df["Margin %"] = (df["Profit (£)"] / df["Discounted Price (£)"]) * 100
     df = df.round(2)
 
-    st.markdown("### 💰 Final Calculated Results")
+    st.markdown("### 📦 Final Calculated Results with Stock")
     st.dataframe(df, use_container_width=True)
 
     # Download CSV
@@ -90,9 +93,9 @@ if st.session_state.products:
     st.download_button(
         label="📥 Download Results as CSV",
         data=csv,
-        file_name='discount_calculations_final.csv',
+        file_name='discount_calculations_with_stock.csv',
         mime='text/csv',
     )
 
 st.markdown("---")
-st.caption("Built for Battle Nexus • Edit, Delete & VAT Ready")
+st.caption("Built for Battle Nexus • Stock Tracking, VAT, Edit & Delete Enabled")
