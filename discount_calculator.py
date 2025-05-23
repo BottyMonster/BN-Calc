@@ -5,11 +5,11 @@ import pandas as pd
 st.set_page_config(page_title="Battle Nexus Discount Calculator", layout="wide")
 st.title("🛠️ Battle Nexus Discount Calculator")
 
-st.markdown("""Upload a CSV or tab/semicolon file. Edit, delete, calculate discounts, include VAT, and track stock.
+st.markdown("""Upload a CSV or Excel file. Edit, delete, calculate discounts, include VAT, and track stock.
 
 **Supported formats:**
-- Comma (`,`) separated CSVs (default)
-- Semicolon (`;`) or Tab (`\t`) delimited files
+- CSV files (`,`, `;`, or tab-delimited)
+- Excel files (`.xlsx`, `.xls`)
 
 **Suggested columns (optional):**
 - Product Name
@@ -27,24 +27,29 @@ if 'products' not in st.session_state:
 include_vat = st.toggle("Include VAT in Calculations (20%)", value=True)
 vat_rate = 0.20
 
-# CSV Upload with smart parsing
-uploaded_file = st.file_uploader("📤 Upload your CSV file here (optional)", type=["csv", "txt"])
+# File upload
+uploaded_file = st.file_uploader("📤 Upload your CSV or Excel file here", type=["csv", "txt", "xlsx", "xls"])
 if uploaded_file:
     try:
-        for encoding in ["utf-8", "ISO-8859-1"]:
-            for sep in [",", ";", "\t"]:
-                try:
-                    df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=sep)
-                    if not df_upload.empty:
-                        break
-                except Exception:
-                    continue
-            else:
-                continue
-            break
+        # Detect Excel vs CSV
+        if uploaded_file.name.endswith((".xlsx", ".xls")):
+            df_upload = pd.read_excel(uploaded_file)
         else:
-            raise ValueError("Could not parse file with common delimiters and encodings.")
+            for encoding in ["utf-8", "ISO-8859-1"]:
+                for sep in [",", ";", "\t"]:
+                    try:
+                        df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=sep)
+                        if not df_upload.empty:
+                            break
+                    except Exception:
+                        continue
+                else:
+                    continue
+                break
+            else:
+                raise ValueError("Could not parse file with common delimiters and encodings.")
 
+        # Fill missing columns with defaults
         for col in ["Product Name", "Retail Price (£)", "Discount %", "Cost Price (£)", "Stock Qty"]:
             if col not in df_upload.columns:
                 df_upload[col] = "" if col == "Product Name" else 0.0
@@ -110,9 +115,9 @@ if st.session_state.products:
     st.download_button(
         label="📥 Download Results as CSV",
         data=csv,
-        file_name='discount_calculations_robust.csv',
+        file_name='discount_calculations_excel_ready.csv',
         mime='text/csv',
     )
 
 st.markdown("---")
-st.caption("Built for Battle Nexus • Smart Encoding + Delimiter Detection + VAT Support")
+st.caption("Built for Battle Nexus • Excel + CSV Support, VAT, Stock, Editing Enabled")
