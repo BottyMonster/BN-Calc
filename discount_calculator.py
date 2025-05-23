@@ -9,6 +9,8 @@ st.title("🛠️ Battle Nexus Discount Calculator")
 st.markdown("""
 Use this tool to calculate your discounted prices and profit margins in real-time.
 Enter your retail price, desired discount percentage, and cost price to see the results instantly.
+
+Matt is a knobhead
 """)
 
 # Editable input table
