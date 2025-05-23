@@ -5,10 +5,13 @@ import pandas as pd
 st.set_page_config(page_title="Battle Nexus Discount Calculator", layout="wide")
 st.title("🛠️ Battle Nexus Discount Calculator")
 
-st.markdown("""Upload a CSV file or manually enter product data. Edit, delete, calculate discounts, include VAT, and track stock.
-Empty fields and alternative encodings are supported.
+st.markdown("""Upload a CSV or tab/semicolon file. Edit, delete, calculate discounts, include VAT, and track stock.
 
-**CSV Column Suggestions (all optional):**
+**Supported formats:**
+- Comma (`,`) separated CSVs (default)
+- Semicolon (`;`) or Tab (`\t`) delimited files
+
+**Suggested columns (optional):**
 - Product Name
 - Retail Price (£)
 - Discount %
@@ -24,17 +27,28 @@ if 'products' not in st.session_state:
 include_vat = st.toggle("Include VAT in Calculations (20%)", value=True)
 vat_rate = 0.20
 
-# CSV Upload
-uploaded_file = st.file_uploader("📤 Upload your CSV file here (optional)", type=["csv"])
+# CSV Upload with smart parsing
+uploaded_file = st.file_uploader("📤 Upload your CSV file here (optional)", type=["csv", "txt"])
 if uploaded_file:
     try:
-        try:
-            df_upload = pd.read_csv(uploaded_file)
-        except UnicodeDecodeError:
-            df_upload = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
+        for encoding in ["utf-8", "ISO-8859-1"]:
+            for sep in [",", ";", "\t"]:
+                try:
+                    df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=sep)
+                    if not df_upload.empty:
+                        break
+                except Exception:
+                    continue
+            else:
+                continue
+            break
+        else:
+            raise ValueError("Could not parse file with common delimiters and encodings.")
+
         for col in ["Product Name", "Retail Price (£)", "Discount %", "Cost Price (£)", "Stock Qty"]:
             if col not in df_upload.columns:
                 df_upload[col] = "" if col == "Product Name" else 0.0
+
         st.session_state.products.extend(df_upload.to_dict(orient="records"))
     except Exception as e:
         st.error(f"Error processing file: {e}")
@@ -96,10 +110,9 @@ if st.session_state.products:
     st.download_button(
         label="📥 Download Results as CSV",
         data=csv,
-        file_name='discount_calculations_flexible.csv',
+        file_name='discount_calculations_robust.csv',
         mime='text/csv',
     )
 
 st.markdown("---")
-st.caption("Built for Battle Nexus • Robust Encoding + VAT + Stock Support")
-
+st.caption("Built for Battle Nexus • Smart Encoding + Delimiter Detection + VAT Support")
