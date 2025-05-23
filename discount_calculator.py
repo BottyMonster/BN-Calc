@@ -7,51 +7,55 @@ st.set_page_config(page_title="Battle Nexus Discount Calculator", layout="wide")
 st.title("🛠️ Battle Nexus Discount Calculator")
 
 st.markdown("""
-Manually enter product details below to calculate the discount price and margin.
-Use the 'Add Product' button to input multiple products.
+Upload a CSV file with your product data, then edit values directly before downloading your results.
+
+**CSV Format Expected:**
+- Product Name
+- Retail Price (£)
+- Discount %
+- Cost Price (£)
 """)
 
-# Initialize session state for multiple entries
-if 'products' not in st.session_state:
-    st.session_state.products = []
+uploaded_file = st.file_uploader("📤 Upload your CSV file here", type=["csv"])
 
-# Add new product entry
-with st.form("product_form", clear_on_submit=True):
-    st.subheader("➕ Add New Product")
-    name = st.text_input("Product Name")
-    retail = st.number_input("Retail Price (£)", min_value=0.0, step=0.01)
-    discount = st.number_input("Discount %", min_value=0.0, max_value=100.0, step=0.1)
-    cost = st.number_input("Cost Price (£)", min_value=0.0, step=0.01)
-    submitted = st.form_submit_button("Add Product")
+if uploaded_file is not None:
+    try:
+        df = pd.read_csv(uploaded_file)
 
-    if submitted:
-        discounted = retail * (1 - discount / 100)
-        profit = discounted - cost
-        margin = (profit / discounted) * 100 if discounted else 0
-        st.session_state.products.append({
-            "Product Name": name,
-            "Retail Price (£)": retail,
-            "Discount %": discount,
-            "Cost Price (£)": cost,
-            "Discounted Price (£)": round(discounted, 2),
-            "Profit (£)": round(profit, 2),
-            "Margin %": round(margin, 2)
-        })
+        # Ensure all required columns are present
+        expected_cols = {"Product Name", "Retail Price (£)", "Discount %", "Cost Price (£)"}
+        if not expected_cols.issubset(set(df.columns)):
+            st.error("CSV is missing one or more required columns.")
+        else:
+            # Editable table
+            st.markdown("### ✏️ Edit Product Data")
+            edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True)
 
-# Display results
-if st.session_state.products:
-    st.markdown("### 💰 Calculated Products")
-    df = pd.DataFrame(st.session_state.products)
-    st.dataframe(df, use_container_width=True)
+            # Perform calculations
+            edited_df["Discounted Price (£)"] = edited_df["Retail Price (£)"] * (1 - edited_df["Discount %"] / 100)
+            edited_df["Profit (£)"] = edited_df["Discounted Price (£)"] - edited_df["Cost Price (£)"]
+            edited_df["Margin %"] = (edited_df["Profit (£)"] / edited_df["Discounted Price (£)"]) * 100
 
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Download Results as CSV",
-        data=csv,
-        file_name='discount_calculations.csv',
-        mime='text/csv',
-    )
+            # Round values
+            edited_df["Discounted Price (£)"] = edited_df["Discounted Price (£)"].round(2)
+            edited_df["Profit (£)"] = edited_df["Profit (£)"].round(2)
+            edited_df["Margin %"] = edited_df["Margin %"].round(2)
+
+            st.markdown("### 💰 Final Calculated Results")
+            st.dataframe(edited_df, use_container_width=True)
+
+            # Download result
+            csv = edited_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Final Results as CSV",
+                data=csv,
+                file_name='discount_calculations.csv',
+                mime='text/csv',
+            )
+    except Exception as e:
+        st.error(f"Error processing file: {e}")
+else:
+    st.info("Awaiting CSV upload to begin calculations.")
 
 st.markdown("---")
-st.caption("Built for Battle Nexus • Compatible with older Streamlit versions")
-
+st.caption("Built for Battle Nexus • Editable CSV version")
