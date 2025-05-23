@@ -5,9 +5,10 @@ import pandas as pd
 st.set_page_config(page_title="Battle Nexus Discount Calculator", layout="wide")
 st.title("🛠️ Battle Nexus Discount Calculator")
 
-st.markdown("""Upload a CSV file or manually enter product data. Then edit or delete items, calculate discounts, track stock, and include VAT if required.
+st.markdown("""Upload a CSV file or manually enter product data. Edit, delete, calculate discounts, include VAT, and track stock.
+Empty fields are allowed on import.
 
-**CSV Format Required:**
+**CSV Column Suggestions (all optional):**
 - Product Name
 - Retail Price (£)
 - Discount %
@@ -28,11 +29,11 @@ uploaded_file = st.file_uploader("📤 Upload your CSV file here (optional)", ty
 if uploaded_file:
     try:
         df_upload = pd.read_csv(uploaded_file)
-        expected_cols = {"Product Name", "Retail Price (£)", "Discount %", "Cost Price (£)", "Stock Qty"}
-        if not expected_cols.issubset(df_upload.columns):
-            st.error("CSV is missing one or more required columns.")
-        else:
-            st.session_state.products.extend(df_upload.to_dict(orient="records"))
+        # Set default values for any missing columns
+        for col in ["Product Name", "Retail Price (£)", "Discount %", "Cost Price (£)", "Stock Qty"]:
+            if col not in df_upload.columns:
+                df_upload[col] = "" if col == "Product Name" else 0.0
+        st.session_state.products.extend(df_upload.to_dict(orient="records"))
     except Exception as e:
         st.error(f"Error processing file: {e}")
 
@@ -61,13 +62,13 @@ if st.session_state.products:
     for i, item in enumerate(st.session_state.products):
         cols = st.columns([3, 2, 2, 2, 2, 1])
         with cols[0]:
-            item["Product Name"] = st.text_input(f"Product Name {i}", value=item["Product Name"], key=f"name_{i}")
+            item["Product Name"] = st.text_input(f"Product Name {i}", value=item.get("Product Name", ""), key=f"name_{i}")
         with cols[1]:
-            item["Retail Price (£)"] = st.number_input(f"Retail Price {i}", value=float(item["Retail Price (£)"]), key=f"retail_{i}")
+            item["Retail Price (£)"] = st.number_input(f"Retail Price {i}", value=float(item.get("Retail Price (£)", 0)), key=f"retail_{i}")
         with cols[2]:
-            item["Discount %"] = st.number_input(f"Discount % {i}", value=float(item["Discount %"]), key=f"discount_{i}")
+            item["Discount %"] = st.number_input(f"Discount % {i}", value=float(item.get("Discount %", 0)), key=f"discount_{i}")
         with cols[3]:
-            item["Cost Price (£)"] = st.number_input(f"Cost Price {i}", value=float(item["Cost Price (£)"]), key=f"cost_{i}")
+            item["Cost Price (£)"] = st.number_input(f"Cost Price {i}", value=float(item.get("Cost Price (£)", 0)), key=f"cost_{i}")
         with cols[4]:
             item["Stock Qty"] = st.number_input(f"Stock Qty {i}", value=int(item.get("Stock Qty", 0)), step=1, key=f"stock_{i}")
         with cols[5]:
@@ -82,10 +83,10 @@ if st.session_state.products:
     df["Final Retail (£)"] = df["Retail Price (£)"] * (1 + vat_rate) if include_vat else df["Retail Price (£)"]
     df["Discounted Price (£)"] = df["Final Retail (£)"] * (1 - df["Discount %"] / 100)
     df["Profit (£)"] = df["Discounted Price (£)"] - df["Cost Price (£)"]
-    df["Margin %"] = (df["Profit (£)"] / df["Discounted Price (£)"]) * 100
+    df["Margin %"] = (df["Profit (£)"] / df["Discounted Price (£)"]).replace([float('inf'), -float('inf')], 0) * 100
     df = df.round(2)
 
-    st.markdown("### 📦 Final Calculated Results with Stock")
+    st.markdown("### 📦 Final Calculated Results")
     st.dataframe(df, use_container_width=True)
 
     # Download CSV
@@ -93,9 +94,9 @@ if st.session_state.products:
     st.download_button(
         label="📥 Download Results as CSV",
         data=csv,
-        file_name='discount_calculations_with_stock.csv',
+        file_name='discount_calculations_flexible.csv',
         mime='text/csv',
     )
 
 st.markdown("---")
-st.caption("Built for Battle Nexus • Stock Tracking, VAT, Edit & Delete Enabled")
+st.caption("Built for Battle Nexus • Flexible CSV Import + VAT + Stock Support")
