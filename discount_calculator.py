@@ -15,7 +15,7 @@ Enter your retail price, desired discount percentage, and cost price to see the 
 
 # Editable input table
 st.markdown("### 📦 Product Discount Table")
-data = st.experimental_data_editor(pd.DataFrame({
+data = st.data_editor(pd.DataFrame({
     "Product Name": ["Example Product"],
     "Retail Price (£)": [100.00],
     "Discount %": [10],
