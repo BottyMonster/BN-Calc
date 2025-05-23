@@ -1,6 +1,4 @@
-
 import streamlit as st
-import pandas as pd
 
 # Page settings
 st.set_page_config(page_title="Battle Nexus Discount Calculator", layout="wide")
